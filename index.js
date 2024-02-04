@@ -25,9 +25,24 @@ const estimateTimeLeft = (startedAt, downloaded, total) => {
   const downloadSpeed = downloaded / elapsedTime;
 
   const remainingBytes = total - downloaded;
-  const estimatedTimeLeft = remainingBytes / downloadSpeed;
+  const estimatedTimeLeftInSeconds = remainingBytes / downloadSpeed;
 
-  return (estimatedTimeLeft / 60).toFixed(2);
+  const hours = Math.floor(estimatedTimeLeftInSeconds / 3600);
+  const minutes = Math.floor((estimatedTimeLeftInSeconds % 3600) / 60);
+  const seconds = Math.floor(estimatedTimeLeftInSeconds % 60);
+
+  let formattedTime = "";
+  if (hours > 0) {
+    formattedTime += `${hours} hours `;
+  }
+  if (minutes > 0) {
+    formattedTime += `${minutes} mins `;
+  }
+  if (estimatedTimeLeftInSeconds < 60) {
+    formattedTime += `${seconds} seconds`;
+  }
+
+  return formattedTime.trim();
 };
 
 const getAnimatedLoading = (percentage) => {
@@ -52,7 +67,7 @@ const showFancyProgress = () => {
     tracker.audio.downloaded,
     tracker.audio.total
   );
-  console.log(`Estimated time left for audio: ${audioTimeLeft} mins`);
+  console.log(`Estimated time left for audio: ${audioTimeLeft}`);
   console.log(
     ` (${toMB(tracker.audio.downloaded)}MB of ${toMB(tracker.audio.total)}MB)\n`
   );
@@ -68,7 +83,7 @@ const showFancyProgress = () => {
     tracker.video.downloaded,
     tracker.video.total
   );
-  console.log(`Estimated time left for video: ${videoTimeLeft} mins`);
+  console.log(`Estimated time left for video: ${videoTimeLeft}`);
   console.log(
     ` (${toMB(tracker.video.downloaded)}MB of ${toMB(tracker.video.total)}MB)\n`
   );
@@ -118,11 +133,14 @@ const downloadAndEncode = async () => {
   ]);
 
   const videoFormats = videoInfo.formats
-    .filter((f) => f.container.includes(format))
+    .filter((f) => !!f.videoCodec && f.container.includes(format))
     .map((format) => ({
       name: `${format.qualityLabel} - ${format.container}`,
       value: format.itag,
-    }));
+    }))
+    .filter(
+      (f, index, self) => index === self.findIndex((t) => t.name === f.name)
+    );
 
   const { quality } = await inquirer.prompt([
     {
