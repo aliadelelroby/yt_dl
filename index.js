@@ -14,9 +14,20 @@ const getInquirer = async () => {
 
 const tracker = {
   start: Date.now(),
-  audio: { downloaded: 0, total: Infinity },
-  video: { downloaded: 0, total: Infinity },
+  audio: { downloaded: 0, total: Infinity, speed: 0 },
+  video: { downloaded: 0, total: Infinity, speed: 0 },
   merged: { frame: 0, speed: "0x", fps: 0 },
+};
+
+const estimateTimeLeft = (startedAt, downloaded, total) => {
+  const elapsedTime = (Date.now() - startedAt) / 1000;
+
+  const downloadSpeed = downloaded / elapsedTime;
+
+  const remainingBytes = total - downloaded;
+  const estimatedTimeLeft = remainingBytes / downloadSpeed;
+
+  return (estimatedTimeLeft / 60).toFixed(2);
 };
 
 const getAnimatedLoading = (percentage) => {
@@ -36,6 +47,12 @@ const showFancyProgress = () => {
       (tracker.audio.downloaded / tracker.audio.total) * 100
     )}`
   );
+  const audioTimeLeft = estimateTimeLeft(
+    tracker.start,
+    tracker.audio.downloaded,
+    tracker.audio.total
+  );
+  console.log(`Estimated time left for audio: ${audioTimeLeft} mins`);
   console.log(
     ` (${toMB(tracker.audio.downloaded)}MB of ${toMB(tracker.audio.total)}MB)\n`
   );
@@ -45,6 +62,13 @@ const showFancyProgress = () => {
       (tracker.video.downloaded / tracker.video.total) * 100
     )}`
   );
+
+  const videoTimeLeft = estimateTimeLeft(
+    tracker.start,
+    tracker.video.downloaded,
+    tracker.video.total
+  );
+  console.log(`Estimated time left for video: ${videoTimeLeft} mins`);
   console.log(
     ` (${toMB(tracker.video.downloaded)}MB of ${toMB(tracker.video.total)}MB)\n`
   );
@@ -85,6 +109,7 @@ const downloadAndEncode = async () => {
       showFancyProgress();
     }
   );
+
   const video = ytdl(youtubeUrl, { quality: "highestvideo" }).on(
     "progress",
     (_, downloaded, total) => {
