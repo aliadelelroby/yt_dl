@@ -86,6 +86,8 @@ const showFancyProgress = () => {
 const downloadAndEncode = async () => {
   let progressbarHandle = null;
 
+  const basePath = require("os").homedir();
+
   const { youtubeUrl, outputDir } = await (
     await getInquirer()
   ).prompt([
@@ -98,7 +100,7 @@ const downloadAndEncode = async () => {
       type: "directory",
       name: "outputDir",
       message: "Choose the output directory:",
-      basePath: "/Users",
+      basePath,
     },
   ]);
 
@@ -140,7 +142,7 @@ const downloadAndEncode = async () => {
       "1:v",
       "-c:v",
       "copy",
-      path.join("/Users/" + outputDir, `${videoTitle}.mkv`),
+      path.join(`${basePath}/` + outputDir, `${videoTitle}.mkv`),
     ],
     {
       windowsHide: true,
