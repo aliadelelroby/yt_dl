@@ -87,22 +87,53 @@ const downloadAndEncode = async () => {
   let progressbarHandle = null;
 
   const basePath = require("os").homedir();
+  const inquirer = await getInquirer();
+  const ytdl = require("ytdl-core");
+  const path = require("path");
+  const cp = require("child_process");
+  const ffmpeg = require("ffmpeg-static");
 
-  const { youtubeUrl, outputDir } = await (
-    await getInquirer()
-  ).prompt([
+  const { youtubeUrl } = await inquirer.prompt([
     {
       type: "input",
       name: "youtubeUrl",
       message: "Enter the YouTube video URL:",
     },
+  ]);
+
+  const videoInfo = await ytdl.getInfo(youtubeUrl);
+  const { outputDir, format } = await inquirer.prompt([
     {
       type: "directory",
       name: "outputDir",
       message: "Choose the output directory:",
       basePath,
     },
+    {
+      type: "list",
+      name: "format",
+      message: "Select video format:",
+      choices: ["mp4", "mkv", "webm"],
+    },
   ]);
+
+  const videoFormats = videoInfo.formats
+    .filter((f) => f.container.includes(format))
+    .map((format) => ({
+      name: `${format.qualityLabel} - ${format.container}`,
+      value: format.itag,
+    }));
+
+  const { quality } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "quality",
+      message: "Select video resolution:",
+      choices: videoFormats,
+    },
+  ]);
+
+  let videoTitle = videoInfo.videoDetails.title.split(" ").join("_");
 
   const audio = ytdl(youtubeUrl, { quality: "highestaudio" }).on(
     "progress",
@@ -112,7 +143,7 @@ const downloadAndEncode = async () => {
     }
   );
 
-  const video = ytdl(youtubeUrl, { quality: "highestvideo" }).on(
+  const video = ytdl(youtubeUrl, { quality: quality }).on(
     "progress",
     (_, downloaded, total) => {
       tracker.video = { downloaded, total };
@@ -120,9 +151,22 @@ const downloadAndEncode = async () => {
     }
   );
 
-  const videoInfo = await ytdl.getInfo(youtubeUrl);
+  let outputFilePath = path.join(
+    `${basePath}/` + outputDir,
+    `${videoTitle}.${format}`
+  );
 
-  const videoTitle = videoInfo.videoDetails.title.split(" ").join("_");
+  let fileIndex = 1;
+  while (fs.existsSync(outputFilePath)) {
+    videoTitle = `${videoInfo.videoDetails.title
+      .split(" ")
+      .join("_")}_${fileIndex}`;
+    outputFilePath = path.join(
+      `${basePath}/` + outputDir,
+      `${videoTitle}.${format}`
+    );
+    fileIndex++;
+  }
 
   const ffmpegProcess = cp.spawn(
     ffmpeg,
@@ -142,7 +186,7 @@ const downloadAndEncode = async () => {
       "1:v",
       "-c:v",
       "copy",
-      path.join(`${basePath}/` + outputDir, `${videoTitle}.mkv`),
+      outputFilePath,
     ],
     {
       windowsHide: true,
