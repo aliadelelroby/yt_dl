@@ -1,10 +1,6 @@
-const cp = require("child_process");
-const ytdl = require("ytdl-core");
-const ffmpeg = require("ffmpeg-static");
-const inquirer = import("inquirer");
 const inquirerDirectory = require("inquirer-directory");
+const inquirer = import("inquirer");
 const fs = require("fs");
-const path = require("path");
 
 const getInquirer = async () => {
   const result = (await inquirer).default;
